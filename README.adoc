@@ -1,0 +1,34 @@
+# Sequence Generator Starter
+
+This repository contains the starter dependency for sequence generator functionality in Spring Boot projects.
+
+The sequence generator provides a simple way to add sequence counters
+to Spring Boot applications. You can control the starting number, the format and
+you can have different sequence counters based on application logic.
+
+== Examples
+
+[source,java]
+----
+    sequenceGeneratorService.initSequence("WebOrder", null, null, 100, "WEB-%04d");
+
+    assertEquals("WEB-0100", sequenceGeneratorService.nextNumber("WebOrder"));
+    assertEquals("WEB-0101", sequenceGeneratorService.nextNumber("WebOrder"));
+    assertEquals("WEB-0102", sequenceGeneratorService.nextNumber("WebOrder"));
+
+    assertEquals(103, sequenceGeneratorService.nextNumberLong("WebOrder"));
+    assertEquals(104, sequenceGeneratorService.nextNumberLong("WebOrder"));
+----
+
+The SequenceGeneratorService implementation is very efficient and can provide
+sequential numbers to concurrent threads without problems.
+
+== Dependencies
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    compile "org.gr8crm.sequence:sequence-generator-starter:0.0.1-SNAPSHOT"
+}
+----
