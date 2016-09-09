@@ -31,7 +31,7 @@ targetCompatibility = 1.8
 jar {
     baseName = 'sequence-generator-starter'
     version = project.version
-    exclude('**/SequenceGeneratorTestApplication**')
+    exclude('**/SequenceGeneratorApplication**')
 }
 
 repositories {

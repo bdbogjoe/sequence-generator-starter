@@ -19,80 +19,82 @@ package org.gr8crm.sequence;
 import java.util.stream.Stream;
 
 /**
- * Sequence Generator interface.
+ * Interface for sequence generators.
  */
 public interface SequenceGenerator {
     /**
      * Create a new sequence.
      *
-     * @param tenant tenant ID
-     * @param name   sequence name
-     * @param group  sub-sequence
-     * @return current sequence status
+     * @param configuration configuration to initialize sequence with
+     * @return sequence status after initialization
      */
-    SequenceStatus create(long tenant, String name, String group);
+    SequenceStatus create(SequenceConfiguration configuration);
 
     /**
      * Delete a sequence.
      *
+     * @param app    application name
      * @param tenant tenant ID
      * @param name   sequence name
      * @param group  sub-sequence
      * @return true if sequence was removed
      */
-    boolean delete(long tenant, String name, String group);
+    boolean delete(String app, long tenant, String name, String group);
 
     /**
      * Get next unique number formatted.
      *
+     * @param app    application name
      * @param tenant tenant ID
      * @param name   sequence name
      * @param group  sub-sequence
      * @return formatted number
      */
-    String nextNumber(long tenant, String name, String group);
+    String nextNumber(String app, long tenant, String name, String group);
 
     /**
      * Get next unique (raw) number.
      *
+     * @param app    application name
      * @param tenant tenant ID
      * @param name   sequence name
      * @param group  sub-sequence
      * @return number as a long
      */
-    long nextNumberLong(long tenant, String name, String group);
+    long nextNumberLong(String app, long tenant, String name, String group);
 
     /**
      * Update sequence.
      *
-     * @param tenant  tenant ID
-     * @param name    sequence name
-     * @param group   sub-sequence
-     * @param format  number format
-     * @param current current number
-     * @param start   new number
-     * @param increment increment
-     * @return sequence status if sequence was updated, null otherwise
+     * @param app       application name
+     * @param tenant    tenant ID
+     * @param name      sequence name
+     * @param group     sub-sequence
+     * @param current   current number
+     * @param start     new number
+     * @return sequence status after update
      */
-    SequenceStatus update(long tenant, String name, String group, String format, long current, long start, int increment);
+    SequenceStatus update(String app, long tenant, String name, String group, long current, long start);
 
     /**
      * Current status of a sequence.
      *
+     * @param app    application name
      * @param tenant tenant ID
      * @param name   sequence name
      * @param group  sub-sequence
-     * @return current status
+     * @return current status or null if no such sequence exists
      */
-    SequenceStatus status(long tenant, String name, String group);
+    SequenceStatus status(String app, long tenant, String name, String group);
 
     /**
      * Get sequence statistics.
      *
+     * @param app    application name
      * @param tenant tenant ID
      * @return statistics for all sequences in the tenant
      */
-    Stream<SequenceStatus> statistics(long tenant);
+    Stream<SequenceStatus> statistics(String app, long tenant);
 
     /**
      * Shutdown the sequence generator.

@@ -16,8 +16,6 @@
 
 package org.gr8crm.sequence;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
@@ -36,22 +35,21 @@ import java.util.stream.Stream;
 public class SimpleSequenceGenerator implements SequenceGenerator {
 
     private static final String KEY_SEPARATOR = "/";
-    private static final String DEFAULT_FORMAT = "%d";
 
     private static final Map<String, Entry> sequences = new HashMap<>();
 
-    private SequenceInitializer sequenceInitializer;
-
-    @Value("${autoInitialize:false}")
-    private boolean autoInitialize;
-
-    @Autowired
-    public SimpleSequenceGenerator(SequenceInitializer sequenceInitializer) {
-        this.sequenceInitializer = sequenceInitializer;
+    private String key(SequenceConfiguration config) {
+        return key(config.getApp(), config.getTenant(), config.getName(), config.getGroup());
     }
 
-    private String key(long tenant, String name, String group) {
-        List<String> tmp = new ArrayList<>(3);
+    private String key(String app, long tenant, String name, String group) {
+        Objects.requireNonNull(app, "application name must be specified");
+        if (app.contains(KEY_SEPARATOR)) {
+            throw new IllegalArgumentException("application name cannot contain " + KEY_SEPARATOR);
+        }
+        List<String> tmp = new ArrayList<>(4);
+
+        tmp.add(app);
 
         tmp.add(String.valueOf(tenant));
 
@@ -65,15 +63,16 @@ public class SimpleSequenceGenerator implements SequenceGenerator {
     }
 
     @Override
-    public SequenceStatus create(long tenant, String name, String group) {
-        final SequenceStatus status = sequenceInitializer.initialize(tenant, name, group);
-        sequences.put(key(tenant, name, group), new Entry(name, group, status.getFormat(), status.getNumber(), status.getIncrement()));
-        return status;
+    public SequenceStatus create(final SequenceConfiguration config) {
+        final String key = key(config);
+        final Entry entry = new Entry(config);
+        sequences.put(key, entry);
+        return entry.status();
     }
 
     @Override
-    public boolean delete(long tenant, String name, String group) {
-        final String key = key(tenant, name, group);
+    public boolean delete(String app, long tenant, String name, String group) {
+        final String key = key(app, tenant, name, group);
         if (sequences.containsKey(key)) {
             synchronized (sequences) {
                 if (sequences.containsKey(key)) {
@@ -86,66 +85,54 @@ public class SimpleSequenceGenerator implements SequenceGenerator {
     }
 
     @Override
-    public String nextNumber(long tenant, String name, String group) {
-        final String key = key(tenant, name, group);
+    public String nextNumber(String app, long tenant, String name, String group) {
+        final String key = key(app, tenant, name, group);
         Entry n = sequences.get(key);
         if (n == null) {
-            if(!autoInitialize) {
-                throw new IllegalArgumentException("No such sequence: " + key);
-            }
-            synchronized (sequences) {
-                n = sequences.get(key);
-                if (n == null) {
-                    // TODO Initializing can be an expensive operation so its bad to do it inside a synchronized block.
-                    final SequenceStatus status = sequenceInitializer.initialize(tenant, name, group);
-                    n = new Entry(name, group, status.getFormat(), status.getNumber(), status.getIncrement());
-                    sequences.put(key, n);
-                }
-            }
+            throw new IllegalArgumentException("No such sequence: " + key);
         }
         return n.getFormattedAndIncrement();
     }
 
     @Override
-    public long nextNumberLong(long tenant, String name, String group) {
-        final String key = key(tenant, name, group);
+    public long nextNumberLong(String app, long tenant, String name, String group) {
+        final String key = key(app, tenant, name, group);
         Entry n = sequences.get(key);
         if (n == null) {
-            if(!autoInitialize) {
-                throw new IllegalArgumentException("No such sequence: " + key);
-            }
-            synchronized (sequences) {
-                n = sequences.get(key);
-                if (n == null) {
-                    // TODO Initializing can be an expensive operation so its bad to do it inside a synchronized block.
-                    final SequenceStatus status = sequenceInitializer.initialize(tenant, name, group);
-                    n = new Entry(name, group, status.getFormat(), status.getNumber(), status.getIncrement());
-                    sequences.put(key, n);
-                }
-            }
+            throw new IllegalArgumentException("No such sequence: " + key);
         }
         return n.getAndIncrement();
     }
 
     @Override
-    public SequenceStatus update(long tenant, String name, String group, String format, long current, long newCurrent, int newIncrement) {
-        final Entry n = sequences.get(key(tenant, name, group));
+    public SequenceStatus update(String app, long tenant, String name, String group, long current, long newCurrent) {
+        final String key = key(app, tenant, name, group);
+        final Entry n = sequences.get(key);
         if (n == null) {
-            throw new IllegalArgumentException("No such sequence: " + key(tenant, name, group));
+            throw new IllegalArgumentException("No such sequence: " + key);
         }
 
-        return new SequenceStatus(name, group, format, n.set(current, newCurrent), newIncrement);
+        n.set(current, newCurrent);
+
+        return n.status();
     }
 
     @Override
-    public SequenceStatus status(long tenant, String name, String group) {
-        final Entry n = sequences.get(key(tenant, name, group));
-        return n != null ? n.status() : null;
+    public SequenceStatus status(String app, long tenant, String name, String group) {
+        final String key = key(app, tenant, name, group);
+        final Entry n = sequences.get(key);
+        if (n == null) {
+            throw new IllegalArgumentException("No such sequence: " + key);
+        }
+
+        return n.status();
     }
 
     @Override
-    public Stream<SequenceStatus> statistics(long tenant) {
-        return sequences.values().stream().map(Entry::status);
+    public Stream<SequenceStatus> statistics(String app, long tenant) {
+        return sequences.values().stream()
+                .filter(entry -> entry.config.getApp().equals(app) && entry.config.getTenant() == tenant)
+                .map(Entry::status);
     }
 
     @Override
@@ -154,26 +141,20 @@ public class SimpleSequenceGenerator implements SequenceGenerator {
     }
 
     private static class Entry {
-        private String name;
-        private String group;
-        private String format;
-        private int increment;
+        private SequenceConfiguration config;
         private AtomicLong number;
 
-        Entry(String name, String group, String format, long number, int increment) {
-            this.name = name;
-            this.group = group;
-            this.format = format != null ? format : DEFAULT_FORMAT;
-            this.increment = increment;
-            this.number = new AtomicLong(number);
+        Entry(SequenceConfiguration config) {
+            this.config = config;
+            this.number = new AtomicLong(config.getStart());
         }
 
         String getFormattedAndIncrement() {
-            return String.format(this.format, getAndIncrement());
+            return String.format(this.config.getFormat(), getAndIncrement());
         }
 
         long getAndIncrement() {
-            return this.number.getAndAdd(this.increment);
+            return this.number.getAndAdd(this.config.getIncrement());
         }
 
         long set(long current, long start) {
@@ -184,7 +165,7 @@ public class SimpleSequenceGenerator implements SequenceGenerator {
         }
 
         SequenceStatus status() {
-            return new SequenceStatus(name, group, format, number.get(), increment);
+            return new SequenceStatus(config, number.get());
         }
     }
 }

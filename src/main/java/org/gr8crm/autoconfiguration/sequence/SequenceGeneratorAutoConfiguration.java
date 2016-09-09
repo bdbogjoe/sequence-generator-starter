@@ -17,13 +17,8 @@
 package org.gr8crm.autoconfiguration.sequence;
 
 import org.gr8crm.sequence.SequenceGenerator;
-import org.gr8crm.sequence.SequenceGeneratorProperties;
-import org.gr8crm.sequence.SequenceInitializer;
 import org.gr8crm.sequence.SimpleSequenceGenerator;
-import org.gr8crm.sequence.SimpleSequenceInitializer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -33,50 +28,11 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @ComponentScan(basePackages = "org.gr8crm.sequence")
-@EnableConfigurationProperties(SequenceGeneratorProperties.class)
 public class SequenceGeneratorAutoConfiguration {
 
-    @Autowired
-    private SequenceGeneratorProperties properties;
-
     @Bean
     @ConditionalOnMissingBean
-    public SequenceInitializer sequenceInitializer() {
-        return new SimpleSequenceInitializer(properties);
+    public SequenceGenerator sequenceGenerator() {
+        return new SimpleSequenceGenerator();
     }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public SequenceGenerator sequenceGenerator(SequenceInitializer sequenceInitializer) {
-        return new SimpleSequenceGenerator(sequenceInitializer);
-    }
-/*
-    protected static class TestSequenceInitializer implements SequenceInitializer {
-
-        private static final String DEFAULT_FORMAT = "%d";
-        private static final long DEFAULT_START = 1L;
-        private static final int DEFAULT_INCREMENT = 1;
-
-        public static String format = DEFAULT_FORMAT;
-        public static long start = DEFAULT_START;
-        public static int increment = DEFAULT_INCREMENT;
-
-        public static void configure(long s, int inc, String f) {
-            start = s;
-            format = f;
-            increment = inc;
-        }
-
-        public static void reset() {
-            format = DEFAULT_FORMAT;
-            start = DEFAULT_START;
-            increment = DEFAULT_INCREMENT;
-        }
-
-        @Override
-        public SequenceStatus initialize(long tenant, String name, String group) {
-            return new SequenceStatus(name, group, format, start, increment);
-        }
-    }
-    */
 }

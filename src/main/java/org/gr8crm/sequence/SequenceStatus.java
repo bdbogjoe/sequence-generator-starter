@@ -21,46 +21,43 @@ package org.gr8crm.sequence;
  */
 public class SequenceStatus {
 
-    private final String name;
-    private String group;
-    private final String format;
+    private SequenceConfiguration configuration;
     private final long number;
-    private final int increment;
 
-    public SequenceStatus(String name, String group, String format, long number, int increment) {
-        this.name = name;
-        this.group = group;
-        this.format = format;
+    public SequenceStatus(SequenceConfiguration configuration, long number) {
+        this.configuration = configuration;
         this.number = number;
-        this.increment = increment;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getGroup() {
-        return group;
-    }
-
-    public String getFormat() {
-        return format;
+    public SequenceConfiguration getConfiguration() {
+        return configuration;
     }
 
     public long getNumber() {
         return number;
     }
 
-    public int getIncrement() {
-        return increment;
-    }
-
     String getNumberFormatted() {
-        return String.format(format, number);
+        return String.format(configuration.getFormat(), number);
     }
 
     @Override
     public String toString() {
-        return name + "=" + getNumberFormatted();
+        StringBuilder s = new StringBuilder();
+
+        s.append(configuration.getApp());
+        s.append('/');
+        s.append(String.valueOf(configuration.getTenant()));
+        s.append('/');
+        s.append(configuration.getName());
+
+        if (configuration.getGroup() != null) {
+            s.append('/');
+            s.append(configuration.getGroup());
+        }
+        s.append('=');
+        s.append(getNumberFormatted());
+
+        return s.toString();
     }
 }
