@@ -37,7 +37,7 @@ wfPublish{
     type='THIRDPARTY'
 }
 
-version "0.0.1-SNAPSHOT"
+version "0.0.1-WF"
 group "org.gr8crm.sequence"
 
 sourceCompatibility = 1.8
